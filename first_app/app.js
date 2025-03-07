@@ -1,3 +1,7 @@
+/**
+ * programming app which take a info from user and add it in data.json file
+ */
+
 import fs from "fs";
 const addToDataFile = (newItem) => {
   if (fs.existsSync("./data.json")) {
