@@ -1,8 +1,10 @@
 import { validationResult } from "express-validator";
 import courses from "../constant/courses_data.js";
 
-
 const handelGetAllCourses = (_, res) => {
+  if (courses.length === 0) {
+    return res.status(404).json({ message: "No courses found" });
+  }
   res.status(200).json(courses);
 };
 const handelGetCourseById = (req, res) => {
@@ -38,7 +40,7 @@ const handelDeleteCourse = (req, res) => {
     return res.status(404).json({ message: "Course not found" });
   }
 
-  courses.filter((c) => c.id !== +course_id);
+  courses = courses.filter((c) => c.id !== +course_id);
 
   res.status(200).json({
     message: "Course deleted successfully",
