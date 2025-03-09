@@ -23,175 +23,124 @@ export const connectToDatabase = async () => {
     console.log("Connected to MongoDB with Mongoose");
   } catch (err) {
     console.error("Error connecting to database:", err);
-
     throw err;
   }
 };
 
-export const handelAddCourse = async (req, res) => {
+export const handelAddCourse = async (req, res, next) => {
   const { title, price } = req.body;
 
   const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
-    return res
-      .status(400)
-      .json({ success: false, message: errors.array(), data: null });
+    errors.status = 400;
+    return next(errors);
   }
-  try {
-    await connectToDatabase();
 
-    const newCourse = new Course({ title, price: +price });
-    await newCourse.save();
+  await connectToDatabase();
 
-    const formattedResult = newCourse.toObject();
-    delete formattedResult.__v;
-    delete formattedResult._id;
+  const newCourse = new Course({ title, price: +price });
+  await newCourse.save();
 
-    return res.status(200).json({
-      data: formattedResult,
-      success: true,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      data: null,
-      message: error.message,
-      success: false,
-    });
-  }
+  const formattedResult = newCourse.toObject();
+  delete formattedResult.__v;
+  delete formattedResult._id;
+
+  return res.status(200).json({
+    data: formattedResult,
+    success: true,
+  });
 };
 
 export const getAllCourses = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const skip = (page - 1) * limit;
 
-  try {
-    await connectToDatabase();
+  await connectToDatabase();
 
-    const courses = await Course.find({}, { __v: false })
-      .limit(limit)
-      .skip(skip);
-
-    res.status(200).json({
-      success: true,
-      data: courses,
-    });
-  } catch (err) {
-    res.status(500).json({
-      message: "Error connecting to db",
-      success: false,
-    });
+  const courses = await Course.find({}, { __v: false }).limit(limit).skip(skip);
+  if (!courses) {
+    const error = new Error("Course not found");
+    error.status = 404;
+    return next(error);
   }
+  return res.status(200).json({
+    success: true,
+    data: courses,
+  });
 };
 export const handleGetCourseById = async (req, res) => {
   const { course_id } = req.params;
 
   if (!course_id) {
-    return res.status(404).json({
-      data: null,
-      message: "No course ID provided",
-      success: false,
-    });
+    const error = new Error("No course ID provided");
+    error.status = 404;
+    return next(error);
   }
 
-  try {
-    await connectToDatabase();
-    const course = await Course.findById(course_id);
+  await connectToDatabase();
+  const course = await Course.findById(course_id).select("-__v");
 
-    if (!course) {
-      return res.status(404).json({
-        data: null,
-        message: "Course not found",
-        success: false,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: course,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      data: null,
-      message: error.message,
-      success: false,
-    });
+  if (!course) {
+    const error = new Error("Course not found");
+    error.status = 404;
+    return next(error);
   }
+
+  return res.status(200).json({
+    success: true,
+    data: course,
+  });
 };
 export const handelChangeCourseById = async (req, res) => {
   const { course_id } = req.params;
 
   if (!course_id) {
-    return res.status(404).json({
-      data: null,
-      message: "No course ID provided",
-      success: false,
-    });
+    const error = new Error("No course ID provided");
+    error.status = 404;
+    return next(error);
   }
 
-  try {
-    await connectToDatabase();
+  await connectToDatabase();
 
-    const result = await Course.findByIdAndUpdate(course_id, req.body, {
-      new: true,
-    }).select("-__v -_id");
+  const result = await Course.findByIdAndUpdate(course_id, req.body, {
+    new: true,
+  }).select("-__v");
 
-    if (!result) {
-      return res.status(404).json({
-        data: null,
-        message: "Course not found",
-        success: false,
-      });
-    }
-
-    return res.status(200).json({
-      message: "Course updated successfully",
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      data: null,
-      message: error.message,
-      success: false,
-    });
+  if (!result) {
+    const error = new Error("Course not found");
+    error.status = 404;
+    return next(error);
   }
+
+  return res.status(200).json({
+    message: "Course updated successfully",
+    success: true,
+    data: result,
+  });
 };
 export const handleDeleteCourse = async (req, res) => {
   const { course_id } = req.params;
 
   if (!course_id) {
-    return res.status(404).json({
-      data: null,
-      message: "No course ID provided",
-      success: false,
-    });
+    const error = new Error("No course ID provided");
+    error.status = 404;
+    return next(error);
   }
 
-  try {
-    await connectToDatabase();
+  await connectToDatabase();
 
-    const result = await Course.findByIdAndDelete(course_id).select(
-      "-__v -_id"
-    );
+  const result = await Course.findByIdAndDelete(course_id).select("-__v -_id");
 
-    if (!result) {
-      return res.status(404).json({
-        data: null,
-        message: "Course not found",
-        success: false,
-      });
-    }
-
-    return res.status(200).json({
-      data: result,
-      message: "Course deleted successfully",
-      success: true,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      data: null,
-      message: error.message,
-      success: false,
-    });
+  if (!result) {
+    const error = new Error("Course not found");
+    error.status = 404;
+    return next(error);
   }
+
+  return res.status(200).json({
+    data: result,
+    message: "Course deleted successfully",
+    success: true,
+  });
 };

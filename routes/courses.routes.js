@@ -7,17 +7,19 @@ import {
   handleDeleteCourse,
   handleGetCourseById,
 } from "../controllers/courses.controller.js";
+import { asyncWrapper } from "../utilities/asyncWrapper.js";
+
 const router = new Router();
 
 router
   .route("/")
-  .get(getAllCourses)
-  .post(validateAddCourse, handelAddCourse);
+  .get(asyncWrapper(getAllCourses))
+  .post(validateAddCourse, asyncWrapper(handelAddCourse));
 
 router
   .route("/:course_id")
-  .get(handleGetCourseById)
-  .delete(handleDeleteCourse)
-  .patch(handelChangeCourseById);
+  .get(asyncWrapper(handleGetCourseById))
+  .delete(asyncWrapper(handleDeleteCourse))
+  .patch(asyncWrapper(handelChangeCourseById));
 
 export { router as CoursesRouter };
