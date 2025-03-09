@@ -1,10 +1,50 @@
 import { validationResult } from "express-validator";
 import { MongoClient, ObjectId } from "mongodb";
-
 const url = `url form .env file`;
-
 const client = new MongoClient(url);
 let db;
+
+// with mongoose
+// import mongoose, { Schema } from "mongoose";
+/*
+const courseSchema = new Schema({
+  title: { type: String, required: true },
+  price: { type: Number, required: true },
+});
+
+  // const Course = mongoose.models.Course || mongoose.model("Course", courseSchema);
+
+  // new Course => const newCourse = new Course({title,price}) ;
+  // newCourse.save(); => await newCourse.save();
+
+  // get All courses => const allCourse = await Course.find ;
+
+  // find by id => const course = Course.findById(course_id);
+
+  // patch => const result = await Course.findByIdAndUpdate(course_id , req.params , {new : true if i want new course})
+
+  //delete => const course = Course.findByIdAndDelete(course_id)
+
+
+export const connectToDatabase = async () => {
+
+  if (mongoose.connection.readyState === 1) return; -> this mean the db was connected before .
+  
+  try {
+    await mongoose.connect(url, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("Connected to MongoDB with Mongoose");
+  } catch (err) {
+    console.error("Error connecting to database:", err);
+    throw err;
+  }
+};
+
+
+*/
+
 export const connectToDatabase = async () => {
   if (db) return db;
 
