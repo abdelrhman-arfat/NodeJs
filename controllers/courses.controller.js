@@ -1,60 +1,29 @@
 import { validationResult } from "express-validator";
-import { MongoClient, ObjectId } from "mongodb";
-const url = `url form .env file`;
-const client = new MongoClient(url);
-let db;
+import mongoose, { Schema } from "mongoose";
+import dotenv from "dotenv";
 
-// with mongoose
-// import mongoose, { Schema } from "mongoose";
-/*
+dotenv.config();
+
 const courseSchema = new Schema({
   title: { type: String, required: true },
   price: { type: Number, required: true },
 });
 
-  // const Course = mongoose.models.Course || mongoose.model("Course", courseSchema);
-
-  // new Course => const newCourse = new Course({title,price}) ;
-  // newCourse.save(); => await newCourse.save();
-
-  // get All courses => const allCourse = await Course.find ;
-
-  // find by id => const course = Course.findById(course_id);
-
-  // patch => const result = await Course.findByIdAndUpdate(course_id , req.params , {new : true if i want new course})
-
-  //delete => const course = Course.findByIdAndDelete(course_id)
-
+const Course = mongoose.models.Course || mongoose.model("course", courseSchema);
 
 export const connectToDatabase = async () => {
+  if (mongoose.connection.readyState === 1) return;
 
-  if (mongoose.connection.readyState === 1) return; -> this mean the db was connected before .
-  
   try {
-    await mongoose.connect(url, {
+    await mongoose.connect(process.env.MONGO_URL, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
+
     console.log("Connected to MongoDB with Mongoose");
   } catch (err) {
     console.error("Error connecting to database:", err);
-    throw err;
-  }
-};
 
-
-*/
-
-export const connectToDatabase = async () => {
-  if (db) return db;
-
-  try {
-    await client.connect();
-    console.log("Connected to MongoDB");
-    db = client.db("my_db");
-    return db;
-  } catch (err) {
-    console.error("Error connecting to database:", err);
     throw err;
   }
 };
@@ -64,34 +33,49 @@ export const handelAddCourse = async (req, res) => {
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res
+      .status(400)
+      .json({ success: false, message: errors.array(), data: null });
   }
   try {
-    const db = await connectToDatabase();
-    const coursesCollection = db.collection("courses");
-    const result = await coursesCollection.insertOne({ title, price: +price });
+    await connectToDatabase();
+
+    const newCourse = new Course({ title, price: +price });
+    await newCourse.save();
+
+    const formattedResult = newCourse.toObject();
+    delete formattedResult.__v;
+    delete formattedResult._id;
+
     return res.status(200).json({
-      message: "Course added successfully",
-      course: result,
+      data: formattedResult,
       success: true,
     });
   } catch (error) {
     return res.status(500).json({
-      message: "Error connecting to db",
-      error,
+      data: null,
+      message: error.message,
       success: false,
     });
   }
 };
 
-export const getAllCourses = async (_, res) => {
+export const getAllCourses = async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (page - 1) * limit;
+
   try {
-    const db = await connectToDatabase();
-    const coursesCollection = db.collection("courses");
-    const courses = await coursesCollection.find().toArray();
-    res.status(200).json(courses);
+    await connectToDatabase();
+
+    const courses = await Course.find({}, { __v: false })
+      .limit(limit)
+      .skip(skip);
+
+    res.status(200).json({
+      success: true,
+      data: courses,
+    });
   } catch (err) {
-    console.error("Error fetching courses:", err);
     res.status(500).json({
       message: "Error connecting to db",
       success: false,
@@ -103,95 +87,110 @@ export const handleGetCourseById = async (req, res) => {
 
   if (!course_id) {
     return res.status(404).json({
+      data: null,
       message: "No course ID provided",
       success: false,
     });
   }
 
   try {
-    const db = await connectToDatabase();
-    const coursesCollection = db.collection("courses");
-    const course = await coursesCollection.findOne({
-      _id: new ObjectId(course_id),
-    });
+    await connectToDatabase();
+    const course = await Course.findById(course_id);
 
     if (!course) {
       return res.status(404).json({
+        data: null,
         message: "Course not found",
         success: false,
       });
     }
 
-    return res.status(200).json(course);
-  } catch (err) {
-    console.error("Error fetching course:", err);
+    return res.status(200).json({
+      success: true,
+      data: course,
+    });
+  } catch (error) {
     return res.status(500).json({
-      message: "Error connecting to db",
+      data: null,
+      message: error.message,
       success: false,
     });
   }
 };
 export const handelChangeCourseById = async (req, res) => {
   const { course_id } = req.params;
+
   if (!course_id) {
     return res.status(404).json({
+      data: null,
       message: "No course ID provided",
       success: false,
     });
   }
 
   try {
-    const db = await connectToDatabase();
-    const coursesCollection = db.collection("courses");
-    const result = await coursesCollection.updateOne(
-      { _id: new ObjectId(course_id) },
-      { $set: req.body }
-    );
-    if (result.matchedCount !== 1) {
+    await connectToDatabase();
+
+    const result = await Course.findByIdAndUpdate(course_id, req.body, {
+      new: true,
+    }).select("-__v -_id");
+
+    if (!result) {
       return res.status(404).json({
+        data: null,
         message: "Course not found",
         success: false,
       });
     }
+
     return res.status(200).json({
       message: "Course updated successfully",
       success: true,
+      data: result,
     });
   } catch (error) {
     return res.status(500).json({
-      message: "Error connecting to db",
+      data: null,
+      message: error.message,
       success: false,
     });
   }
 };
 export const handleDeleteCourse = async (req, res) => {
   const { course_id } = req.params;
+
   if (!course_id) {
     return res.status(404).json({
+      data: null,
       message: "No course ID provided",
       success: false,
     });
   }
+
   try {
-    const db = await connectToDatabase();
-    const coursesCollection = db.collection("courses");
-    const result = await coursesCollection.deleteOne({
-      _id: new ObjectId(course_id),
-    });
-    if (result.deletedCount !== 1) {
+    await connectToDatabase();
+
+    const result = await Course.findByIdAndDelete(course_id).select(
+      "-__v -_id"
+    );
+
+    if (!result) {
       return res.status(404).json({
+        data: null,
         message: "Course not found",
         success: false,
       });
     }
+
     return res.status(200).json({
+      data: result,
       message: "Course deleted successfully",
       success: true,
     });
   } catch (error) {
     return res.status(500).json({
-      message: "Error connecting to db",
-      error,
+      data: null,
+      message: error.message,
       success: false,
     });
   }
