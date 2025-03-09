@@ -10,12 +10,12 @@ import {
 const router = new Router();
 
 router
-  .route("/api/courses")
+  .route("/")
   .get(getAllCourses)
   .post(validateAddCourse, handelAddCourse);
 
 router
-  .route("/api/courses/:course_id")
+  .route("/:course_id")
   .get(handleGetCourseById)
   .delete(handleDeleteCourse)
   .patch(handelChangeCourseById);
