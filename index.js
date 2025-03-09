@@ -6,7 +6,7 @@ import { CoursesRouter } from "./routes/courses.routes.js";
 const app = express();
 app.use(express.json());
 app.use((error, req, res, next) => {
-  res.status(error.status || 500).json({
+  return res.status(error.status || 500).json({
     success: false,
     message: error.message || "Internal Server Error",
   });
