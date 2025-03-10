@@ -7,7 +7,7 @@ import {
   handleDeleteCourse,
   handleGetCourseById,
 } from "../controllers/courses.controller.js";
-import { asyncWrapper } from "../utilities/asyncWrapper.js";
+import { asyncWrapper } from "../middleware/asyncWrapper.js";
 
 const router = new Router();
 

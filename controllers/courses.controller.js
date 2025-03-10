@@ -1,31 +1,9 @@
 import { validationResult } from "express-validator";
-import mongoose, { Schema } from "mongoose";
 import dotenv from "dotenv";
+import { Course } from "../modules/courses_collections.js";
+import { connectToDatabase } from "../utilities/dbConnection.js";
 
 dotenv.config();
-
-const courseSchema = new Schema({
-  title: { type: String, required: true },
-  price: { type: Number, required: true },
-});
-
-const Course = mongoose.models.Course || mongoose.model("course", courseSchema);
-
-export const connectToDatabase = async () => {
-  if (mongoose.connection.readyState === 1) return;
-
-  try {
-    await mongoose.connect(process.env.MONGO_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
-    console.log("Connected to MongoDB with Mongoose");
-  } catch (err) {
-    console.error("Error connecting to database:", err);
-    throw err;
-  }
-};
 
 export const handelAddCourse = async (req, res, next) => {
   const { title, price } = req.body;
